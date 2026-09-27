@@ -1,12 +1,10 @@
 import os
 from datetime import datetime
-from io import BytesIO
 
 from dotenv import load_dotenv
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, BufferedInputFile
-from aiogram import F
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 
 load_dotenv()
@@ -37,7 +35,7 @@ PROGRAMS = {
 
 В том году у вас открывается уникальная возможность, которая может привести к беременности. Это время символизирует создание новой жизни и объединение, наполненное энергией любви и семейных ценностей. Программа, которую вы будете проходить, обладает мощной и чувственной атмосферой, способствующей раскрытию вашего внутреннего женского начала.
 
-Ключевым аспектом этой программы является умение находить компромиссы с вашим партнером. Это включает в себя активное слушание и взаимопонимание, а также важность открытого общения. Необходимо делиться своими обидами и недопониманиями, быть искренними как с собой, так и со своим близким человеком. Эти практики помогут вам не только укрепить вашу связь, но и создать необходимую эмоциональную основу для осуществления вашей мечты — беременности.
+Ключевым аспектом данной программы является умение находить компромиссы с вашим партнером. Это включает в себя активное слушание и взаимопонимание, а также важность открытого общения. Необходимо делиться своими обидами и недопониманиями, быть искренними как с собой, так и со своим близким человеком. Эти практики помогут вам не только укрепить вашу связь, но и создать необходимую эмоциональную основу для осуществления вашей мечты — беременности.
 
 Беременность, с точки зрения цифровой психологии, зависит не только от программы года, но и от проработки личных программ, а также от программ, которые рассчитываются на каждый месяц, день. Зная, как это проработать шансы на зачатие будут значительно выше.
 
@@ -139,18 +137,20 @@ interest_keyboard = ReplyKeyboardMarkup(
 tariff_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="💰 Базовый расчёт — 600 ₽")],
-        [KeyboardButton(text="💎 Расширенный расчёт — 1200 ₽")]
+        [KeyboardButton(text="💎 Расширенный расчёт — 1200 ₽")],
+        [KeyboardButton(text="💬 Отзывы")]
     ],
     resize_keyboard=True
 )
 
+
 reviews_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="💬 Отзывы")],
         [KeyboardButton(text="⬅️ Назад")]
     ],
     resize_keyboard=True
 )
+
 
 # =========================================================
 # ВРЕМЕННОЕ ХРАНЕНИЕ ДАННЫХ
@@ -159,9 +159,36 @@ reviews_keyboard = ReplyKeyboardMarkup(
 user_dates = {}
 user_programs = {}
 
-BASIC_VIDEO_ID = "BAACAgIAAxkBAAMnarfc4MGKMu-D-Q6C44wQA5hCdY4AAhKqAAK6xsFJ7ERQ05fz4Jk9BA"
 
-EXTENDED_VIDEO_ID = "BAACAgIAAxkBAAMparfdBKKEpb9wOLMe9B5FFbfyx1oAAheqAAK6xsFJpg7bJ95hXGI9BA"
+# =========================================================
+# ВИДЕО
+# =========================================================
+
+BASIC_VIDEO_ID = (
+    "BAACAgIAAxkBAAMnarfc4MGKMu-D-Q6C44wQA5hCdY4AAhKqAAK6xsFJ7ERQ05fz4Jk9BA"
+)
+
+EXTENDED_VIDEO_ID = (
+    "BAACAgIAAxkBAAMparfdBKKEpb9wOLMe9B5FFbfyx1oAAheqAAK6xsFJpg7bJ95hXGI9BA"
+)
+
+
+# =========================================================
+# ОТЗЫВЫ
+# =========================================================
+
+REVIEW_PHOTOS = [
+    "AgACAgIAAxkBAAPkarkPtzE-1hAfeK54AicygyObHdkAAsEkaxu6xslJgtxTQaSwSqQBAAMCAAN4AAM9BA",
+    "AgACAgIAAxkBAAPyarkSN5OA_hCJc0e5q0jc9G22u04AAgolaxu6xslJe6hManT9vEkBAAMCAAN4AAM9BA",
+    "AgACAgIAAxkBAAP0arkSVvd837EVClZNSM_IHYD4spkAAgslaxu6xslJCYO0xpO7rnEBAAMCAAN4AAM9BA",
+    "AgACAgIAAxkBAAP2arkSc-zpF9xNWgfnye2fg2vNNQYAAg0laxu6xslJ0ldj7f1Qu_EBAAMCAAN4AAM9BA",
+    "AgACAgIAAxkBAAP4arkSln87uecbNTfnQkE7dnX9nUgAAg8laxu6xslJnvODR2fvw9YBAAMCAAN5AAM9BA",
+    "AgACAgIAAxkBAAP6arkSxFZikxIe3J3KwrHRm7uOONUAAhAlaxu6xslJH5jEHormt3EBAAMCAAN5AAM9BA",
+    "AgACAgIAAxkBAAP8arkS2bUMQ-DeGVnJpkbYxwiZZYAAAhElaxu6xslJJczvHWLLrdcBAAMCAAN4AAM9BA",
+    "AgACAgIAAxkBAAP-arkS6tju-U0vmDsYYTIjZW_UfhQAAhIlaxu6xslJdOLTJI0gfu4BAAMCAAN5AAM9BA",
+    "AgACAgIAAxkBAAIBAAFquRMF7lU7QEYWZvU05mi_7TeFWQACEyVrG7rGyUn-915APGHdSwEAAwIAA3kAAz0E",
+    "AgACAgIAAxkBAAIBAmq5ExOdptL3WNzWCow1XiL5SFm4AAIUJWsbusbJSXNCH0tB9FIEAQADAgADeQADPQQ"
+]
 
 
 # =========================================================
@@ -184,11 +211,62 @@ def calculate_program(date_text: str) -> int:
 
 
 # =========================================================
+# ЭКРАН ТАРИФОВ
+# =========================================================
+
+async def show_tariffs(message: types.Message):
+    await message.answer(
+        "💳 <b>Базовый расчёт — 600 ₽</b>\n"
+        "💳 <b>Расширенный расчёт — 1200 ₽</b>\n\n"
+
+        "<b>Базовый расчёт:</b>\n"
+        "✅ Личный прогноз на 2027 и 2028 год + рекомендации\n"
+        "✅ Расчёты по месяцам на 2 года для благоприятного и возможного зачатия\n"
+        "✅ 9 основных рекомендаций на проработку\n\n"
+
+        "<b>Расширенный расчёт:</b>\n"
+        "✅ Личный прогноз на 2027, 2028, 2029 + рекомендации\n"
+        "✅ Расчёты по месяцам на 3 года\n"
+        "✅ 16 рекомендаций главных энергий, отвечающих за женское начало и беременность\n"
+        "✅ Пример аскезы — как её писать\n"
+        "✅ Готовые аффирмации — как они действуют и через какой срок\n"
+        "✅ Признаки заблокированной 1 и 2 чакры\n"
+        "✅ Рекомендации для проработки 1 и 2 чакры\n"
+        "✅ Энергетические акценты месяца — когда и что практиковать",
+        parse_mode="HTML"
+    )
+
+    await message.answer(
+        "💬 <b>Помогу выбрать тебе расчёт.</b>\n\n"
+        "Посмотри короткие видео ниже 👇",
+        parse_mode="HTML"
+    )
+
+    await message.answer_video(
+        video=BASIC_VIDEO_ID,
+        caption="<b>💳 Базовый расчёт — 600 ₽</b>",
+        parse_mode="HTML"
+    )
+
+    await message.answer_video(
+        video=EXTENDED_VIDEO_ID,
+        caption="<b>💳 Расширенный расчёт — 1200 ₽</b>",
+        parse_mode="HTML"
+    )
+
+    await message.answer(
+        "Выбери подходящий вариант:",
+        reply_markup=tariff_keyboard
+    )
+
+
+# =========================================================
 # /START
 # =========================================================
 
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
+
     await message.answer(
         "Привет! ❤️\n\n"
         "Я помогу тебе получить персональную перспективу беременности "
@@ -200,11 +278,12 @@ async def start_handler(message: types.Message):
 
 
 # =========================================================
-# ПОДТВЕРЖДЕНИЕ ДАТЫ
+# ИЗМЕНИТЬ ДАТУ
 # =========================================================
 
 @dp.message(F.text == "✏️ Изменить дату")
 async def edit_date_handler(message: types.Message):
+
     await message.answer(
         "Хорошо 🌸\n\n"
         "Напиши дату рождения ещё раз.\n\n"
@@ -213,16 +292,22 @@ async def edit_date_handler(message: types.Message):
     )
 
 
+# =========================================================
+# ПОДТВЕРДИТЬ ДАТУ
+# =========================================================
+
 @dp.message(F.text == "✅ Да, всё верно")
 async def confirm_date_handler(message: types.Message):
 
     user_id = message.from_user.id
 
     if user_id not in user_dates:
+
         await message.answer(
             "Давай начнём сначала 🌸\n\n"
             "Напиши свою дату рождения в формате ДД.ММ.ГГГГ."
         )
+
         return
 
     date_text = user_dates[user_id]
@@ -244,8 +329,9 @@ async def confirm_date_handler(message: types.Message):
         reply_markup=interest_keyboard
     )
 
+
 # =========================================================
-# ПОЛУЧЕНИЕ ДАТЫ
+# ОСНОВНОЙ ОБРАБОТЧИК
 # =========================================================
 
 @dp.message()
@@ -253,196 +339,110 @@ async def message_handler(message: types.Message):
 
     user_id = message.from_user.id
     text = message.text.strip() if message.text else ""
+
+
+    # =====================================================
+    # НАЗАД ИЗ ОТЗЫВОВ
+    # =====================================================
+
     if text == "⬅️ Назад":
 
-        await message.answer(
-            "💳 <b>Базовый расчёт — 600 ₽</b>\n"
-            "💳 <b>Расширенный расчёт — 1200 ₽</b>\n\n"
-
-            "<b>Базовый расчёт:</b>\n"
-            "✅ Личный прогноз на 2027 и 2028 год + рекомендации\n"
-            "✅ Расчёты по месяцам на 2 года для благоприятного и возможного зачатия\n"
-            "✅ 9 основных рекомендаций на проработку\n\n"
-
-            "<b>Расширенный расчёт:</b>\n"
-            "✅ Личный прогноз на 2027, 2028, 2029 + рекомендации\n"
-            "✅ Расчёты по месяцам на 3 года\n"
-            "✅ 16 рекомендаций главных энергий, отвечающих за женское начало и беременность\n"
-            "✅ Пример аскезы — как её писать\n"
-            "✅ Готовые аффирмации — как они действуют и через какой срок\n"
-            "✅ Признаки заблокированной 1 и 2 чакры\n"
-            "✅ Рекомендации для проработки 1 и 2 чакры\n"
-            "✅ Энергетические акценты месяца — когда и что практиковать",
-            parse_mode="HTML"
-        )
-
-        await message.answer(
-            "💬 <b>Помогу выбрать тебе расчёт.</b>\n\n"
-            "Посмотри короткие видео ниже 👇",
-            parse_mode="HTML"
-        )
-
-        await message.answer_video(
-            video=BASIC_VIDEO_ID,
-            caption="<b>💳 Базовый расчёт — 600 ₽</b>",
-            parse_mode="HTML"
-        )
-
-        await message.answer_video(
-            video=EXTENDED_VIDEO_ID,
-            caption="<b>💳 Расширенный расчёт — 1200 ₽</b>",
-            parse_mode="HTML"
-        )
-
-        await message.answer(
-            "Выбери подходящий вариант:",
-            reply_markup=tariff_keyboard
-        )
-
-        await message.answer(
-            "💬 <b>Отзывы</b>",
-            parse_mode="HTML",
-            reply_markup=reviews_keyboard
-        )
+        await show_tariffs(message)
 
         return
+
+
+    # =====================================================
+    # ОТЗЫВЫ
+    # =====================================================
 
     if text == "💬 Отзывы":
 
         await message.answer(
             "❤️ <b>Отзывы девушек</b>\n\n"
             "Спасибо каждой, кто поделился своими впечатлениями 🌸",
-            parse_mode="HTML"
-        )
-
-        await message.answer_photo(
-            photo="AgACAgIAAxkBAAPkarkPtzE-1hAfeK54AicygyObHdkAAsEkaxu6xslJgtxTQaSwSqQBAAMCAAN4AAM9BA"
-        )
-
-        await message.answer_photo(
-            photo="AgACAgIAAxkBAAPyarkSN5OA_hCJc0e5q0jc9G22u04AAgolaxu6xslJe6hManT9vEkBAAMCAAN4AAM9BA"
-        )
-
-        await message.answer_photo(
-            photo="AgACAgIAAxkBAAP0arkSVvd837EVClZNSM_IHYD4spkAAgslaxu6xslJCYO0xpO7rnEBAAMCAAN4AAM9BA"
-        )
-
-        await message.answer_photo(
-            photo="AgACAgIAAxkBAAP2arkSc-zpF9xNWgfnye2fg2vNNQYAAg0laxu6xslJ0ldj7f1Qu_EBAAMCAAN4AAM9BA"
-        )
-
-        await message.answer_photo(
-            photo="AgACAgIAAxkBAAP4arkSln87uecbNTfnQkE7dnX9nUgAAg8laxu6xslJnvODR2fvw9YBAAMCAAN5AAM9BA"
-        )
-
-        await message.answer_photo(
-            photo="AgACAgIAAxkBAAP6arkSxFZikxIe3J3KwrHRm7uOONUAAhAlaxu6xslJH5jEHormt3EBAAMCAAN5AAM9BA"
-        )
-
-        await message.answer_photo(
-            photo="AgACAgIAAxkBAAP8arkS2bUMQ-DeGVnJpkbYxwiZZYAAAhElaxu6xslJJczvHWLLrdcBAAMCAAN4AAM9BA"
-        )
-
-        await message.answer_photo(
-            photo="AgACAgIAAxkBAAP-arkS6tju-U0vmDsYYTIjZW_UfhQAAhIlaxu6xslJdOLTJI0gfu4BAAMCAAN5AAM9BA"
-        )
-
-        await message.answer_photo(
-            photo="AgACAgIAAxkBAAIBAAFquRMF7lU7QEYWZvU05mi_7TeFWQACEyVrG7rGyUn-915APGHdSwEAAwIAA3kAAz0E"
-        )
-
-        await message.answer_photo(
-            photo="AgACAgIAAxkBAAIBAmq5ExOdptL3WNzWCow1XiL5SFm4AAIUJWsbusbJSXNCH0tB9FIEAQADAgADeQADPQQ"
-        )
-
-        return
-
-    # Кнопка "Мне интересно"
-    if text == "Мне интересно":
-        await message.answer(
-            "💳 <b>Базовый расчёт — 600 ₽</b>\n"
-            "💳 <b>Расширенный расчёт — 1200 ₽</b>\n\n"
-
-            "<b>Базовый расчёт:</b>\n"
-            "✅ Личный прогноз на 2027 и 2028 год + рекомендации\n"
-            "✅ Расчёты по месяцам на 2 года для благоприятного и возможного зачатия\n"
-            "✅ 9 основных рекомендаций на проработку\n\n"
-
-            "<b>Расширенный расчёт:</b>\n"
-            "✅ Личный прогноз на 2027, 2028, 2029 + рекомендации\n"
-            "✅ Расчёты по месяцам на 3 года\n"
-            "✅ 16 рекомендаций главных энергий, отвечающих за женское начало и беременность\n"
-            "✅ Пример аскезы — как её писать\n"
-            "✅ Готовые аффирмации — как они действуют и через какой срок\n"
-            "✅ Признаки заблокированной 1 и 2 чакры\n"
-            "✅ Рекомендации для проработки 1 и 2 чакры\n"
-            "✅ Энергетические акценты месяца — когда и что практиковать",
-            parse_mode="HTML"
-        )
-
-        await message.answer(
-            "💬 <b>Помогу выбрать тебе расчёт.</b>\n\n"
-            "Посмотри короткие видео ниже 👇",
-            parse_mode="HTML"
-        )
-
-        await message.answer_video(
-            video=BASIC_VIDEO_ID,
-            caption="<b>💳 Базовый расчёт — 600 ₽</b>",
-            parse_mode="HTML"
-        )
-
-        await message.answer_video(
-            video=EXTENDED_VIDEO_ID,
-            caption="<b>💳 Расширенный расчёт — 1200 ₽</b>",
-            parse_mode="HTML"
-        )
-
-        await message.answer(
-            "Выбери подходящий вариант:",
-            reply_markup=tariff_keyboard
-        )
-
-        await message.answer(
-            "💬 <b>Отзывы</b>\n\n"
-            "Посмотри отзывы девушек, которые уже получили свой расчёт ❤️",
             parse_mode="HTML",
             reply_markup=reviews_keyboard
         )
 
+        for photo_id in REVIEW_PHOTOS:
+            await message.answer_photo(photo=photo_id)
+
         return
 
-    # Выбор тарифа
-    if text == "💰 Базовый расчёт — 600 ₽":
-        await message.answer(
-            "💰 Базовый расчёт — 600 ₽\n\n"
-            "На следующем этапе подключим оплату."
-        )
+
+    # =====================================================
+    # МНЕ ИНТЕРЕСНО
+    # =====================================================
+
+    if text == "Мне интересно":
+
+        await show_tariffs(message)
+
         return
+
+
+    # =====================================================
+    # БАЗОВЫЙ ТАРИФ
+    # =====================================================
+
+    if text == "💰 Базовый расчёт — 600 ₽":
+
+        await message.answer(
+            "💰 <b>Базовый расчёт — 600 ₽</b>\n\n"
+            "На следующем этапе подключим оплату.",
+            parse_mode="HTML"
+        )
+
+        return
+
+
+    # =====================================================
+    # РАСШИРЕННЫЙ ТАРИФ
+    # =====================================================
 
     if text == "💎 Расширенный расчёт — 1200 ₽":
+
         await message.answer(
-            "💎 Расширенный расчёт — 1200 ₽\n\n"
-            "На следующем этапе подключим оплату."
+            "💎 <b>Расширенный расчёт — 1200 ₽</b>\n\n"
+            "На следующем этапе подключим оплату.",
+            parse_mode="HTML"
         )
+
         return
 
-    # Проверяем дату
+
+    # =====================================================
+    # ПРОВЕРКА ДАТЫ
+    # =====================================================
+
     try:
+
         datetime.strptime(text, "%d.%m.%Y")
+
     except ValueError:
+
         await message.answer(
             "Не совсем понял дату 🌸\n\n"
             "Пожалуйста, введи её в формате:\n"
             "ДД.ММ.ГГГГ\n\n"
             "Например: 22.04.1996"
         )
+
         return
 
-    # Сохраняем дату
+
+    # =====================================================
+    # СОХРАНЯЕМ ДАТУ
+    # =====================================================
+
     user_dates[user_id] = text
 
-    # Запрашиваем подтверждение
+
+    # =====================================================
+    # ПОДТВЕРЖДЕНИЕ
+    # =====================================================
+
     await message.answer(
         f"Ты указала дату рождения:\n\n"
         f"🎂 {text}\n\n"
@@ -456,11 +456,13 @@ async def message_handler(message: types.Message):
 # =========================================================
 
 async def main():
+
     print("Бот запущен...")
+
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(main())
 
+    asyncio.run(main())
