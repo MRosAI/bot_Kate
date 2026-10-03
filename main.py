@@ -4,12 +4,13 @@ from datetime import datetime
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice
 
 
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+PAYMENT_PROVIDER_TOKEN = os.getenv("PAYMENT_PROVIDER_TOKEN")
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -169,7 +170,7 @@ BASIC_VIDEO_ID = (
 )
 
 EXTENDED_VIDEO_ID = (
-    "BAACAgIAAxkBAAMparfdBKKEpb9wOLMe9B5FFbfyx1oAAheqAAK6xsFJpg7bJ95hXGI9BA"
+    "BAACAgIAAxkBAAMparfdBKKEpb9wOLMe9B5FFbfyx1oAAheqAAK6xsFJpg7bJ95hXGIj9BA"
 )
 
 
@@ -196,6 +197,7 @@ REVIEW_PHOTOS = [
 # =========================================================
 
 def calculate_program(date_text: str) -> int:
+
     date = datetime.strptime(date_text, "%d.%m.%Y")
 
     day = date.day
@@ -215,6 +217,7 @@ def calculate_program(date_text: str) -> int:
 # =========================================================
 
 async def show_tariffs(message: types.Message):
+
     await message.answer(
         "💳 <b>Базовый расчёт — 600 ₽</b>\n"
         "💳 <b>Расширенный расчёт — 1200 ₽</b>\n\n"
@@ -331,6 +334,43 @@ async def confirm_date_handler(message: types.Message):
 
 
 # =========================================================
+# ОПЛАТА
+# =========================================================
+
+@dp.pre_checkout_query()
+async def pre_checkout_handler(pre_checkout_query):
+
+    await pre_checkout_query.answer(ok=True)
+
+
+@dp.message(F.successful_payment)
+async def successful_payment_handler(message: types.Message):
+
+    payment = message.successful_payment
+    payload = payment.invoice_payload
+
+    if payload == "basic_600":
+
+        await message.answer(
+            "🎉 <b>Оплата прошла успешно!</b>\n\n"
+            "Спасибо за покупку ❤️\n\n"
+            "Базовый расчёт оплачен. "
+            "Сейчас подготовим его для тебя.",
+            parse_mode="HTML"
+        )
+
+    elif payload == "extended_1200":
+
+        await message.answer(
+            "🎉 <b>Оплата прошла успешно!</b>\n\n"
+            "Спасибо за покупку ❤️\n\n"
+            "Расширенный расчёт оплачен. "
+            "Сейчас подготовим его для тебя.",
+            parse_mode="HTML"
+        )
+
+
+# =========================================================
 # ОСНОВНОЙ ОБРАБОТЧИК
 # =========================================================
 
@@ -388,10 +428,19 @@ async def message_handler(message: types.Message):
 
     if text == "💰 Базовый расчёт — 600 ₽":
 
-        await message.answer(
-            "💰 <b>Базовый расчёт — 600 ₽</b>\n\n"
-            "На следующем этапе подключим оплату.",
-            parse_mode="HTML"
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Базовый расчёт",
+            description="Персональный расчёт на 2027 и 2028 год",
+            payload="basic_600",
+            provider_token=PAYMENT_PROVIDER_TOKEN,
+            currency="RUB",
+            prices=[
+                LabeledPrice(
+                    label="Базовый расчёт",
+                    amount=60000
+                )
+            ]
         )
 
         return
@@ -403,10 +452,19 @@ async def message_handler(message: types.Message):
 
     if text == "💎 Расширенный расчёт — 1200 ₽":
 
-        await message.answer(
-            "💎 <b>Расширенный расчёт — 1200 ₽</b>\n\n"
-            "На следующем этапе подключим оплату.",
-            parse_mode="HTML"
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Расширенный расчёт",
+            description="Расширенный персональный расчёт",
+            payload="extended_1200",
+            provider_token=PAYMENT_PROVIDER_TOKEN,
+            currency="RUB",
+            prices=[
+                LabeledPrice(
+                    label="Расширенный расчёт",
+                    amount=120000
+                )
+            ]
         )
 
         return
@@ -463,6 +521,7 @@ async def main():
 
 
 if __name__ == "__main__":
+
     import asyncio
 
     asyncio.run(main())
