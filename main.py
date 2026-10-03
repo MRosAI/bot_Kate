@@ -38,11 +38,26 @@ if not YOOKASSA_SHOP_ID:
 if not YOOKASSA_SECRET_KEY:
     raise RuntimeError("Не найден YOOKASSA_SECRET_KEY в .env")
 
+
 Configuration.account_id = YOOKASSA_SHOP_ID
 Configuration.secret_key = YOOKASSA_SECRET_KEY
 
+
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+
+
+# =========================================================
+# ССЫЛКИ
+# =========================================================
+
+INTERNATIONAL_PAYMENT_URL = (
+    "https://numerology-expert.payform.ru/"
+)
+
+PERSONAL_MESSAGES_URL = (
+    "https://t.me/katena_krzs"
+)
 
 
 # =========================================================
@@ -54,8 +69,11 @@ user_requests = defaultdict(list)
 RATE_LIMIT_COUNT = 5
 RATE_LIMIT_SECONDS = 10
 
+payment_in_progress = set()
+
 
 def is_rate_limited(user_id: int) -> bool:
+
     now = time.monotonic()
 
     requests = user_requests[user_id]
@@ -75,7 +93,7 @@ def is_rate_limited(user_id: int) -> bool:
 
 
 # =========================================================
-# ТЕКСТЫ ПРОГРАММ
+# ПРОГРАММЫ
 # =========================================================
 
 PROGRAMS = {
@@ -233,7 +251,7 @@ reviews_keyboard = ReplyKeyboardMarkup(
 
 
 # =========================================================
-# ВРЕМЕННОЕ ХРАНЕНИЕ ДАННЫХ
+# ВРЕМЕННЫЕ ДАННЫЕ
 # =========================================================
 
 user_dates = {}
@@ -272,51 +290,46 @@ REVIEW_PHOTOS = [
 
 
 # =========================================================
-# ССЫЛКИ
-# =========================================================
-
-INTERNATIONAL_PAYMENT_URL = "https://numerology-expert.payform.ru/"
-PERSONAL_MESSAGES_URL = "https://t.me/katena_krzs"
-
-
-# =========================================================
 # РАСЧЁТ ПРОГРАММЫ
 # =========================================================
 
 def calculate_program(date_text: str) -> int:
-    date = datetime.strptime(date_text, "%d.%m.%Y")
 
-    day = date.day
-    month = date.month
+    date = datetime.strptime(
+        date_text,
+        "%d.%m.%Y"
+    )
 
-    result = day + month
+    result = date.day + date.month
     result += 11
 
     while result > 9:
-        result = sum(int(digit) for digit in str(result))
+        result = sum(
+            int(digit)
+            for digit in str(result)
+        )
 
     return result
 
 
 # =========================================================
-# ЭКРАН ТАРИФОВ
+# ТАРИФЫ
 # =========================================================
 
 async def show_tariffs(message: types.Message):
 
     await message.answer(
-        "💳 <b>Базовый расчёт — 600 ₽</b>\n"
-        "💳 <b>Расширенный расчёт — 1200 ₽</b>\n\n"
-
-        "<b>Базовый расчёт:</b>\n"
+        "<b>Базовый расчёт — 600 ₽</b>\n\n"
         "✅ Личный прогноз на 2027 и 2028 год + рекомендации\n"
-        "✅ Расчёты по месяцам на 2 года для благоприятного и возможного зачатия\n"
+        "✅ Расчёты по месяцам на 2 года для благоприятного "
+        "и возможного зачатия\n"
         "✅ 9 основных рекомендаций на проработку\n\n"
 
-        "<b>Расширенный расчёт:</b>\n"
+        "<b>Расширенный расчёт — 1200 ₽</b>\n\n"
         "✅ Личный прогноз на 2027, 2028, 2029 + рекомендации\n"
         "✅ Расчёты по месяцам на 3 года\n"
-        "✅ 16 рекомендаций главных энергий, отвечающих за женское начало и беременность\n"
+        "✅ 16 рекомендаций главных энергий, отвечающих "
+        "за женское начало и беременность\n"
         "✅ Пример аскезы — как её писать\n"
         "✅ Готовые аффирмации — как они действуют и через какой срок\n"
         "✅ Признаки заблокированной 1 и 2 чакры\n"
@@ -372,7 +385,7 @@ async def show_cis_payment(message: types.Message):
 
 async def show_international_payment(message: types.Message):
 
-    international_link_keyboard = InlineKeyboardMarkup(
+    keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -387,41 +400,37 @@ async def show_international_payment(message: types.Message):
         "🌍 <b>Оплата для других стран</b>\n\n"
         "Для оплаты перейдите по кнопке ниже 👇",
         parse_mode="HTML",
-        reply_markup=international_link_keyboard
+        reply_markup=keyboard
     )
 
     await message.answer(
-        "После оплаты ознакомьтесь с правилами работы и отправьте "
-        "необходимые данные.",
+        "После оплаты ознакомьтесь с правилами работы "
+        "и отправьте необходимые данные.",
         reply_markup=international_keyboard
     )
 
 
 # =========================================================
-# ПРАВИЛА РАБОТЫ И ОПЛАТ
+# ПРАВИЛА
 # =========================================================
 
 async def show_rules(message: types.Message):
 
     await message.answer(
         "<b>💳 Оплата</b>\n\n"
-
         "• Россия и страны СНГ: выбирайте любой из доступных "
         "способов оплаты.\n"
         "• Другие страны: действует отдельная система оплаты, "
         "выбирайте нужный вариант.\n\n"
 
         "<b>📩 Что нужно для расчёта</b>\n\n"
-
         "Пришлите в личные сообщения по ссылке:\n"
         f"{PERSONAL_MESSAGES_URL}\n\n"
-
         "такие данные:\n"
         "1. Имя и дата рождения.\n"
         "2. Скриншот чека/подтверждения оплаты.\n\n"
 
         "<b>⏰ Сроки готовности</b>\n\n"
-
         "Срок зависит от времени поступления оплаты (МСК):\n\n"
         "• До 20:00 — расчёт будет готов в тот же день до 23:00.\n"
         "• После 20:00 — расчёт будет готов на следующий день до 23:00.",
@@ -450,7 +459,9 @@ async def notify_katya(
         else "не указан"
     )
 
-    date_text = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    date_text = datetime.now().strftime(
+        "%d.%m.%Y %H:%M:%S"
+    )
 
     try:
 
@@ -471,11 +482,13 @@ async def notify_katya(
 
     except Exception as e:
 
-        print(f"Ошибка отправки уведомления Кате: {e}")
+        print(
+            f"Ошибка отправки уведомления Кате: {e}"
+        )
 
 
 # =========================================================
-# ПРОВЕРКА ПЛАТЕЖА ЮKASSA
+# ПРОВЕРКА ПЛАТЕЖА
 # =========================================================
 
 async def monitor_yookassa_payment(
@@ -490,81 +503,88 @@ async def monitor_yookassa_payment(
         f"{payment_id} | {tariff_name} | {amount} ₽"
     )
 
-    for _ in range(180):
+    try:
 
-        await asyncio.sleep(5)
+        for _ in range(180):
 
-        try:
+            await asyncio.sleep(5)
 
-            payment = await asyncio.to_thread(
-                Payment.find_one,
-                payment_id
-            )
+            try:
 
-            status = payment.status
-
-            print(
-                f"Платёж {payment_id}: {status}"
-            )
-
-            if status == "succeeded":
-
-                await message.answer(
-                    "🎉 <b>Оплата прошла успешно!</b>\n\n"
-                    "Спасибо за покупку ❤️\n\n"
-                    f"<b>{tariff_name}</b> оплачен.\n\n"
-                    "Теперь отправь Кате в личные сообщения:\n"
-                    "1. Имя\n"
-                    "2. Дату рождения\n\n"
-                    "И обязательно сохрани подтверждение оплаты.",
-                    parse_mode="HTML",
-                    reply_markup=InlineKeyboardMarkup(
-                        inline_keyboard=[
-                            [
-                                InlineKeyboardButton(
-                                    text="📩 Написать Кате",
-                                    url=PERSONAL_MESSAGES_URL
-                                )
-                            ]
-                        ]
-                    )
+                payment = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        Payment.find_one,
+                        payment_id
+                    ),
+                    timeout=30
                 )
 
-                await notify_katya(
-                    message=message,
-                    tariff_name=tariff_name,
-                    amount=amount
-                )
+                status = payment.status
 
                 print(
-                    f"Платёж успешно завершён: {payment_id}"
+                    f"Платёж {payment_id}: {status}"
                 )
 
-                return
+                if status == "succeeded":
 
-            if status in (
-                "canceled",
-                "cancelled"
-            ):
+                    await message.answer(
+                        "🎉 <b>Оплата прошла успешно!</b>\n\n"
+                        "Спасибо за покупку ❤️\n\n"
+                        f"<b>{tariff_name}</b> оплачен.\n\n"
+                        "Теперь отправь Кате в личные сообщения:\n"
+                        "1. Имя\n"
+                        "2. Дату рождения\n\n"
+                        "И обязательно сохрани подтверждение оплаты.",
+                        parse_mode="HTML",
+                        reply_markup=InlineKeyboardMarkup(
+                            inline_keyboard=[
+                                [
+                                    InlineKeyboardButton(
+                                        text="📩 Написать Кате",
+                                        url=PERSONAL_MESSAGES_URL
+                                    )
+                                ]
+                            ]
+                        )
+                    )
 
-                await message.answer(
-                    "❌ Платёж не был завершён.\n\n"
-                    "Если хочешь попробовать ещё раз, "
-                    "выбери тариф повторно."
+                    await notify_katya(
+                        message=message,
+                        tariff_name=tariff_name,
+                        amount=amount
+                    )
+
+                    print(
+                        f"Платёж успешно завершён: {payment_id}"
+                    )
+
+                    return
+
+                if status in (
+                    "canceled",
+                    "cancelled"
+                ):
+
+                    await message.answer(
+                        "❌ Платёж не был завершён.\n\n"
+                        "Если хочешь попробовать ещё раз, "
+                        "выбери тариф повторно."
+                    )
+
+                    return
+
+            except Exception as e:
+
+                print(
+                    f"Ошибка проверки платежа "
+                    f"{payment_id}: {e}"
                 )
 
-                return
+    finally:
 
-        except Exception as e:
-
-            print(
-                f"Ошибка проверки платежа "
-                f"{payment_id}: {e}"
-            )
-
-    print(
-        f"Время ожидания платежа истекло: {payment_id}"
-    )
+        payment_in_progress.discard(
+            message.from_user.id
+        )
 
 
 # =========================================================
@@ -578,41 +598,81 @@ async def create_yookassa_payment(
     tariff_name: str
 ):
 
+    user_id = message.from_user.id
+
+    if user_id in payment_in_progress:
+
+        await message.answer(
+            "⏳ Платёж уже создаётся.\n\n"
+            "Подожди несколько секунд."
+        )
+
+        return
+
+    payment_in_progress.add(user_id)
+
+    print(
+        f">>> Начинаем создание платежа: "
+        f"{tariff_name} | {amount} ₽ | user={user_id}"
+    )
+
     try:
 
-        payment = await asyncio.to_thread(
-            Payment.create,
-            {
-                "amount": {
-                    "value": amount,
-                    "currency": "RUB"
-                },
-
-                "capture": True,
-
-                "confirmation": {
-                    "type": "redirect",
-                    "return_url": "https://t.me/Karizskaya_k_bot"
-                },
-
-                "description": description,
-
-                "metadata": {
-                    "telegram_user_id": str(
-                        message.from_user.id
-                    ),
-                    "telegram_username": (
-                        message.from_user.username or ""
-                    ),
-                    "tariff": tariff_name
-                }
+        payment_data = {
+            "amount": {
+                "value": amount,
+                "currency": "RUB"
             },
-            str(uuid.uuid4())
+
+            "capture": True,
+
+            "confirmation": {
+                "type": "redirect",
+                "return_url": "https://t.me/Karizskaya_k_bot"
+            },
+
+            "description": description,
+
+            "metadata": {
+                "telegram_user_id": str(user_id),
+                "telegram_username": (
+                    message.from_user.username or ""
+                ),
+                "tariff": tariff_name
+            }
+        }
+
+        print(">>> Отправляем запрос в YooKassa...")
+
+        payment = await asyncio.wait_for(
+            asyncio.to_thread(
+                Payment.create,
+                payment_data,
+                str(uuid.uuid4())
+            ),
+            timeout=30
         )
+
+        print(
+            f">>> YooKassa ответила. "
+            f"payment_id={payment.id}"
+        )
+
+        confirmation = payment.confirmation
+
+        if not confirmation:
+            raise RuntimeError(
+                "YooKassa не вернула confirmation"
+            )
 
         confirmation_url = (
-            payment.confirmation.confirmation_url
+            confirmation.confirmation_url
         )
+
+        if not confirmation_url:
+            raise RuntimeError(
+                "YooKassa не вернула confirmation_url"
+            )
 
         payment_keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
@@ -636,10 +696,8 @@ async def create_yookassa_payment(
         )
 
         print(
-            f"Создан платёж ЮKassa: "
-            f"{payment.id} | "
-            f"{tariff_name} | "
-            f"{amount} ₽"
+            f">>> Платёж создан: "
+            f"{payment.id} | {tariff_name} | {amount} ₽"
         )
 
         asyncio.create_task(
@@ -651,10 +709,28 @@ async def create_yookassa_payment(
             )
         )
 
-    except Exception as e:
+        payment_in_progress.discard(user_id)
+
+    except asyncio.TimeoutError:
+
+        payment_in_progress.discard(user_id)
 
         print(
-            f"Ошибка создания платежа ЮKassa: {e}"
+            "!!! YooKassa не ответила за 30 секунд"
+        )
+
+        await message.answer(
+            "❌ YooKassa не ответила вовремя.\n\n"
+            "Попробуй ещё раз через несколько секунд."
+        )
+
+    except Exception as e:
+
+        payment_in_progress.discard(user_id)
+
+        print(
+            f"!!! Ошибка создания платежа YooKassa: "
+            f"{type(e).__name__}: {e}"
         )
 
         await message.answer(
@@ -700,7 +776,7 @@ async def edit_date_handler(message: types.Message):
 
 
 # =========================================================
-# ПОДТВЕРДИТЬ ДАТУ
+# ПОДТВЕРЖДЕНИЕ ДАТЫ
 # =========================================================
 
 @dp.message(F.text == "✅ Да, всё верно")
@@ -720,7 +796,9 @@ async def confirm_date_handler(message: types.Message):
 
     date_text = user_dates[user_id]
 
-    program = calculate_program(date_text)
+    program = calculate_program(
+        date_text
+    )
 
     user_programs[user_id] = program
 
@@ -731,7 +809,8 @@ async def confirm_date_handler(message: types.Message):
     )
 
     await message.answer(
-        "🌸 <b>Если тебе интересно узнать более подробно о расчёте —\n"
+        "🌸 <b>Если тебе интересно узнать более подробно "
+        "о расчёте —\n"
         "нажимай кнопку ниже. 👇</b> 🌸",
         parse_mode="HTML",
         reply_markup=interest_keyboard
@@ -754,7 +833,7 @@ async def test_katya_handler(message: types.Message):
         await bot.send_message(
             chat_id=KATYA_CHAT_ID,
             text=(
-                "🧪 <b>Тест уведомлений</b>\n\n"
+                "🧪 <b>Тестовое сообщение</b>\n\n"
                 "Бот успешно подключил уведомления "
                 "для Кати ❤️"
             ),
@@ -768,7 +847,7 @@ async def test_katya_handler(message: types.Message):
     except Exception as e:
 
         print(
-            f"Ошибка отправки тестового сообщения: {e}"
+            f"Ошибка отправки сообщения Кате: {e}"
         )
 
         await message.answer(
@@ -778,11 +857,146 @@ async def test_katya_handler(message: types.Message):
 
 
 # =========================================================
+# КНОПКА «МНЕ ИНТЕРЕСНО»
+# =========================================================
+
+@dp.message(F.text == "Мне интересно")
+async def interest_handler(message: types.Message):
+
+    print("Нажата кнопка: Мне интересно")
+
+    await show_tariffs(message)
+
+
+# =========================================================
+# КНОПКА «ДЛЯ СНГ»
+# =========================================================
+
+@dp.message(F.text == "🇷🇺 Для СНГ")
+async def cis_handler(message: types.Message):
+
+    print("Нажата кнопка: Для СНГ")
+
+    await show_cis_payment(message)
+
+
+# =========================================================
+# КНОПКА «ДРУГИЕ СТРАНЫ»
+# =========================================================
+
+@dp.message(F.text == "🌍 Для других стран")
+async def international_handler(message: types.Message):
+
+    print("Нажата кнопка: Для других стран")
+
+    await show_international_payment(message)
+
+
+# =========================================================
+# КНОПКА «ПРАВИЛА»
+# =========================================================
+
+@dp.message(F.text == "📋 Правила работы и оплат")
+async def rules_handler(message: types.Message):
+
+    print("Нажата кнопка: Правила")
+
+    await show_rules(message)
+
+
+# =========================================================
+# КНОПКА «ОТЗЫВЫ»
+# =========================================================
+
+@dp.message(F.text == "💬 Отзывы")
+async def reviews_handler(message: types.Message):
+
+    print("Нажата кнопка: Отзывы")
+
+    await message.answer(
+        "❤️ <b>Отзывы девушек</b>\n\n"
+        "Спасибо каждой, кто поделился своими "
+        "впечатлениями 🌸",
+        parse_mode="HTML",
+        reply_markup=reviews_keyboard
+    )
+
+    for photo_id in REVIEW_PHOTOS:
+
+        await message.answer_photo(
+            photo=photo_id
+        )
+
+
+# =========================================================
+# КНОПКА «НАЗАД»
+# =========================================================
+
+@dp.message(F.text == "⬅️ Назад")
+async def back_handler(message: types.Message):
+
+    print("Нажата кнопка: Назад")
+
+    await show_tariffs(message)
+
+
+# =========================================================
+# БАЗОВЫЙ ТАРИФ
+# =========================================================
+
+@dp.message(F.text == "💰 Базовый расчёт — 600 ₽")
+async def basic_payment_handler(message: types.Message):
+
+    print(
+        ">>> Нажата кнопка: "
+        "Базовый расчёт — 600 ₽"
+    )
+
+    await create_yookassa_payment(
+        message=message,
+        amount="600.00",
+        description=(
+            "Персональный расчёт "
+            "на 2027 и 2028 год"
+        ),
+        tariff_name="Базовый расчёт"
+    )
+
+
+# =========================================================
+# РАСШИРЕННЫЙ ТАРИФ
+# =========================================================
+
+@dp.message(F.text == "💎 Расширенный расчёт — 1200 ₽")
+async def extended_payment_handler(
+    message: types.Message
+):
+
+    print(
+        ">>> Нажата кнопка: "
+        "Расширенный расчёт — 1200 ₽"
+    )
+
+    await create_yookassa_payment(
+        message=message,
+        amount="1200.00",
+        description=(
+            "Расширенный персональный расчёт "
+            "на 2027, 2028 и 2029 год"
+        ),
+        tariff_name="Расширенный расчёт"
+    )
+
+
+# =========================================================
 # ОСНОВНОЙ ОБРАБОТЧИК
 # =========================================================
 
 @dp.message()
 async def message_handler(message: types.Message):
+
+    if not message.text:
+        return
 
     user_id = message.from_user.id
 
@@ -795,128 +1009,11 @@ async def message_handler(message: types.Message):
 
         return
 
-    text = message.text.strip() if message.text else ""
+    text = message.text.strip()
 
-
-    # =====================================================
-    # НАЗАД
-    # =====================================================
-
-    if text == "⬅️ Назад":
-
-        await show_tariffs(message)
-
-        return
-
-
-    # =====================================================
-    # ДЛЯ СНГ
-    # =====================================================
-
-    if text == "🇷🇺 Для СНГ":
-
-        await show_cis_payment(message)
-
-        return
-
-
-    # =====================================================
-    # ДЛЯ ДРУГИХ СТРАН
-    # =====================================================
-
-    if text == "🌍 Для других стран":
-
-        await show_international_payment(message)
-
-        return
-
-
-    # =====================================================
-    # ПРАВИЛА
-    # =====================================================
-
-    if text == "📋 Правила работы и оплат":
-
-        await show_rules(message)
-
-        return
-
-
-    # =====================================================
-    # ОТЗЫВЫ
-    # =====================================================
-
-    if text == "💬 Отзывы":
-
-        await message.answer(
-            "❤️ <b>Отзывы девушек</b>\n\n"
-            "Спасибо каждой, кто поделился своими "
-            "впечатлениями 🌸",
-            parse_mode="HTML",
-            reply_markup=reviews_keyboard
-        )
-
-        for photo_id in REVIEW_PHOTOS:
-
-            await message.answer_photo(
-                photo=photo_id
-            )
-
-        return
-
-
-    # =====================================================
-    # МНЕ ИНТЕРЕСНО
-    # =====================================================
-
-    if text == "Мне интересно":
-
-        await show_tariffs(message)
-
-        return
-
-
-    # =====================================================
-    # БАЗОВЫЙ ТАРИФ — 600 ₽
-    # =====================================================
-
-    if text == "💰 Базовый расчёт — 600 ₽":
-
-        await create_yookassa_payment(
-            message=message,
-            amount="600.00",
-            description=(
-                "Персональный расчёт "
-                "на 2027 и 2028 год"
-            ),
-            tariff_name="Базовый расчёт"
-        )
-
-        return
-
-
-    # =====================================================
-    # РАСШИРЕННЫЙ ТАРИФ — 1200 ₽
-    # =====================================================
-
-    if text == "💎 Расширенный расчёт — 1200 ₽":
-
-        await create_yookassa_payment(
-            message=message,
-            amount="1200.00",
-            description=(
-                "Расширенный персональный расчёт "
-                "на 2027, 2028 и 2029 год"
-            ),
-            tariff_name="Расширенный расчёт"
-        )
-
-        return
-
-
-    # =====================================================
-    # ПРОВЕРКА ДАТЫ
-    # =====================================================
+    print(
+        f"Получен текст: {repr(text)}"
+    )
 
     try:
 
@@ -936,17 +1033,7 @@ async def message_handler(message: types.Message):
 
         return
 
-
-    # =====================================================
-    # СОХРАНЯЕМ ДАТУ
-    # =====================================================
-
     user_dates[user_id] = text
-
-
-    # =====================================================
-    # ПОДТВЕРЖДЕНИЕ
-    # =====================================================
 
     await message.answer(
         f"Ты указала дату рождения:\n\n"
@@ -962,7 +1049,19 @@ async def message_handler(message: types.Message):
 
 async def main():
 
+    print("=" * 50)
+    print("БОТ ЗАПУСКАЕТСЯ")
+    print("=" * 50)
+    print(
+        f"YooKassa Shop ID: "
+        f"{YOOKASSA_SHOP_ID}"
+    )
+    print(
+        f"Katya Chat ID: "
+        f"{KATYA_CHAT_ID}"
+    )
     print("Бот запущен...")
+    print("=" * 50)
 
     await dp.start_polling(bot)
 
