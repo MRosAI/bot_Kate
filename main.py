@@ -4,7 +4,13 @@ from datetime import datetime
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice
+from aiogram.types import (
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    LabeledPrice,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton
+)
 
 
 load_dotenv()
@@ -135,16 +141,48 @@ interest_keyboard = ReplyKeyboardMarkup(
 )
 
 
-tariff_keyboard = ReplyKeyboardMarkup(
+# Главное меню выбора
+choice_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="💰 Базовый расчёт — 600 ₽")],
-        [KeyboardButton(text="💎 Расширенный расчёт — 1200 ₽")],
-        [KeyboardButton(text="💬 Отзывы")]
+        [KeyboardButton(text="🇷🇺 Для СНГ")],
+        [KeyboardButton(text="🌍 Для других стран")],
+        [KeyboardButton(text="💬 Отзывы")],
+        [KeyboardButton(text="📋 Правила работы и оплат")]
     ],
     resize_keyboard=True
 )
 
 
+# Меню оплаты для СНГ
+cis_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="💰 Базовый расчёт — 600 ₽")],
+        [KeyboardButton(text="💎 Расширенный расчёт — 1200 ₽")],
+        [KeyboardButton(text="⬅️ Назад")]
+    ],
+    resize_keyboard=True
+)
+
+
+# Кнопка назад для правил
+rules_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="⬅️ Назад")]
+    ],
+    resize_keyboard=True
+)
+
+
+# Кнопка назад для международной оплаты
+international_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="⬅️ Назад")]
+    ],
+    resize_keyboard=True
+)
+
+
+# Кнопка назад для отзывов
 reviews_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="⬅️ Назад")]
@@ -193,6 +231,22 @@ REVIEW_PHOTOS = [
 
 
 # =========================================================
+# ССЫЛКА НА ОПЛАТУ ДЛЯ ДРУГИХ СТРАН
+# =========================================================
+
+INTERNATIONAL_PAYMENT_URL = "https://numerology-expert.payform.ru/"
+
+
+# =========================================================
+# ССЫЛКА НА ЛИЧНЫЕ СООБЩЕНИЯ
+# =========================================================
+# Пока оставляем заглушку.
+# Когда дашь настоящую ссылку Кати, заменим её здесь.
+
+PERSONAL_MESSAGES_URL = "https://t.me/katena_krzs"
+
+
+# =========================================================
 # РАСЧЁТ ПРОГРАММЫ
 # =========================================================
 
@@ -213,7 +267,7 @@ def calculate_program(date_text: str) -> int:
 
 
 # =========================================================
-# ЭКРАН ТАРИФОВ
+# ЭКРАН ТАРИФОВ / ГЛАВНЫЙ ЭКРАН ВЫБОРА
 # =========================================================
 
 async def show_tariffs(message: types.Message):
@@ -258,8 +312,89 @@ async def show_tariffs(message: types.Message):
     )
 
     await message.answer(
+        "<b>Перед выбором подходящего для Вас расчёта, "
+        "обязательно ознакомьтесь с «Правилами работы и оплат».</b>\n\n"
         "Выбери подходящий вариант:",
-        reply_markup=tariff_keyboard
+        parse_mode="HTML",
+        reply_markup=choice_keyboard
+    )
+
+
+# =========================================================
+# ЭКРАН ДЛЯ СНГ
+# =========================================================
+
+async def show_cis_payment(message: types.Message):
+
+    await message.answer(
+        "🇷🇺 <b>Оплата для СНГ</b>\n\n"
+        "Выбери подходящий расчёт:",
+        parse_mode="HTML",
+        reply_markup=cis_keyboard
+    )
+
+
+# =========================================================
+# ЭКРАН ДЛЯ ДРУГИХ СТРАН
+# =========================================================
+
+async def show_international_payment(message: types.Message):
+
+    international_link_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🌍 Перейти к оплате",
+                    url=INTERNATIONAL_PAYMENT_URL
+                )
+            ]
+        ]
+    )
+
+    await message.answer(
+        "🌍 <b>Оплата для других стран</b>\n\n"
+        "Для оплаты перейдите по кнопке ниже 👇",
+        parse_mode="HTML",
+        reply_markup=international_link_keyboard
+    )
+
+    await message.answer(
+        "После оплаты ознакомьтесь с правилами работы и отправьте "
+        "необходимые данные.",
+        reply_markup=international_keyboard
+    )
+
+
+# =========================================================
+# ПРАВИЛА РАБОТЫ И ОПЛАТ
+# =========================================================
+
+async def show_rules(message: types.Message):
+
+    await message.answer(
+        "<b>💳 Оплата</b>\n\n"
+
+        "• Россия и страны СНГ: выбирайте любой из доступных "
+        "способов оплаты.\n"
+        "• Другие страны: действует отдельная система оплаты, "
+        "выбирайте нужный вариант.\n\n"
+
+        "<b>📩 Что нужно для расчёта</b>\n\n"
+
+        "Пришлите в личные сообщения по ссылке:\n"
+        f"{PERSONAL_MESSAGES_URL}\n\n"
+
+        "такие данные:\n"
+        "1. Имя и дата рождения.\n"
+        "2. Скриншот чека/подтверждения оплаты.\n\n"
+
+        "<b>⏰ Сроки готовности</b>\n\n"
+
+        "Срок зависит от времени поступления оплаты (МСК):\n\n"
+        "• До 20:00 — расчёт будет готов в тот же день до 23:00.\n"
+        "• После 20:00 — расчёт будет готов на следующий день до 23:00.",
+        parse_mode="HTML",
+        reply_markup=rules_keyboard
     )
 
 
@@ -334,7 +469,7 @@ async def confirm_date_handler(message: types.Message):
 
 
 # =========================================================
-# ОПЛАТА
+# ОПЛАТА — ТЕКУЩАЯ СИСТЕМА ДЛЯ СНГ
 # =========================================================
 
 @dp.pre_checkout_query()
@@ -378,16 +513,51 @@ async def successful_payment_handler(message: types.Message):
 async def message_handler(message: types.Message):
 
     user_id = message.from_user.id
+
+    # Защита от сообщений без текста
     text = message.text.strip() if message.text else ""
 
 
     # =====================================================
-    # НАЗАД ИЗ ОТЗЫВОВ
+    # НАЗАД
     # =====================================================
 
     if text == "⬅️ Назад":
 
         await show_tariffs(message)
+
+        return
+
+
+    # =====================================================
+    # ДЛЯ СНГ
+    # =====================================================
+
+    if text == "🇷🇺 Для СНГ":
+
+        await show_cis_payment(message)
+
+        return
+
+
+    # =====================================================
+    # ДЛЯ ДРУГИХ СТРАН
+    # =====================================================
+
+    if text == "🌍 Для других стран":
+
+        await show_international_payment(message)
+
+        return
+
+
+    # =====================================================
+    # ПРАВИЛА РАБОТЫ И ОПЛАТ
+    # =====================================================
+
+    if text == "📋 Правила работы и оплат":
+
+        await show_rules(message)
 
         return
 
@@ -525,4 +695,3 @@ if __name__ == "__main__":
     import asyncio
 
     asyncio.run(main())
-
