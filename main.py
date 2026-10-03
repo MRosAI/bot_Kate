@@ -166,11 +166,11 @@ user_programs = {}
 # =========================================================
 
 BASIC_VIDEO_ID = (
-    "BAACAgIAAxkBAAMnarfc4MGKMu-D-Q6C44wQA5hCdY4AAhKqAAK6xsFJ7ERQ05fz4Jk9BA"
+    "BAACAgIAAxkBAAICAAFqwRoh3xaYzVVuIAOQqjRXklVO9gACVKkAAg_mCEpLy3o6FIo3XT0E"
 )
 
 EXTENDED_VIDEO_ID = (
-    "BAACAgIAAxkBAAMparfdBKKEpb9wOLMe9B5FFbfyx1oAAheqAAK6xsFJpg7bJ95hXGIj9BA"
+    "BAACAgIAAxkBAAICAmrBGl4eqAWB1G9HxtXUJS2xHE0KAAJZqQACD-YISu1xywOAsDQWPQQ"
 )
 
 
@@ -525,3 +525,4 @@ if __name__ == "__main__":
     import asyncio
 
     asyncio.run(main())
+
