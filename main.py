@@ -1,4 +1,6 @@
 import os
+import time
+from collections import defaultdict
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -17,10 +19,39 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PAYMENT_PROVIDER_TOKEN = os.getenv("PAYMENT_PROVIDER_TOKEN")
+KATYA_CHAT_ID = os.getenv("KATYA_CHAT_ID")
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# =========================================================
+# ЗАЩИТА ОТ СПАМА
+# =========================================================
+
+user_requests = defaultdict(list)
+
+RATE_LIMIT_COUNT = 5
+RATE_LIMIT_SECONDS = 10
+
+
+def is_rate_limited(user_id: int) -> bool:
+    now = time.monotonic()
+
+    requests = user_requests[user_id]
+
+    # Удаляем старые запросы
+    requests[:] = [
+        request_time
+        for request_time in requests
+        if now - request_time < RATE_LIMIT_SECONDS
+    ]
+
+    # Проверяем лимит
+    if len(requests) >= RATE_LIMIT_COUNT:
+        return True
+
+    requests.append(now)
+    return False
 
 # =========================================================
 # ТЕКСТЫ ПРОГРАММ
@@ -404,6 +435,7 @@ async def show_rules(message: types.Message):
 
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
+    print(f"CHAT_ID: {message.chat.id}")
 
     await message.answer(
         "Привет! ❤️\n\n"
@@ -513,6 +545,14 @@ async def successful_payment_handler(message: types.Message):
 async def message_handler(message: types.Message):
 
     user_id = message.from_user.id
+
+    # Защита от спама
+    if is_rate_limited(user_id):
+        await message.answer(
+            "⏳ Слишком много сообщений подряд.\n\n"
+            "Подожди несколько секунд и продолжи 🌸"
+        )
+        return
 
     # Защита от сообщений без текста
     text = message.text.strip() if message.text else ""
@@ -682,6 +722,20 @@ async def message_handler(message: types.Message):
 # =========================================================
 # ЗАПУСК
 # =========================================================
+@dp.message(F.text == "/test_katya")
+async def test_katya_handler(message: types.Message):
+    print(f"KATYA_CHAT_ID = {KATYA_CHAT_ID}")
+
+    await bot.send_message(
+        chat_id=KATYA_CHAT_ID,
+        text=(
+            "🧪 <b>Тест уведомлений</b>\n\n"
+            "Бот успешно подключил уведомления для Кати ❤️"
+        ),
+        parse_mode="HTML"
+    )
+
+    await message.answer("✅ Тестовое сообщение отправлено Кате.")
 
 async def main():
 
