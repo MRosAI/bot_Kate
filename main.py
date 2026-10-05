@@ -750,6 +750,18 @@ async def start_handler(message: types.Message):
         f"CHAT_ID: {message.chat.id}"
     )
 
+    # Отправляем приветственную картинку
+    image_path = os.path.join(
+        os.path.dirname(__file__),
+        "images",
+        "welcome.png"
+    )
+
+    await message.answer_photo(
+        photo=types.FSInputFile(image_path)
+    )
+
+    # Отправляем приветствие
     await message.answer(
         "Привет! ❤️\n\n"
         "Я помогу тебе получить персональную перспективу "
