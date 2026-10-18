@@ -777,6 +777,7 @@ async def extended_payment_handler(message: types.Message):
 # ПОДТВЕРЖДЕНИЕ ОПЛАТЫ
 # =========================================================
 
+
 async def send_payment_instructions(
     callback: types.CallbackQuery,
     tariff_name: str
@@ -794,41 +795,28 @@ async def send_payment_instructions(
         ]
     )
 
+    if tariff_name == "Оплата для других стран":
+        instructions = (
+            "1. Чек или скриншот подтверждения оплаты.\n"
+            f"2. Название тарифа: {tariff_name}.\n\n"
+        )
+    else:
+        instructions = (
+            "1. Чек или скриншот подтверждения оплаты.\n"
+            "2. Email, который ты указала при оплате.\n"
+            f"3. Название тарифа: {tariff_name}.\n\n"
+        )
+
     await callback.message.answer(
         f"Спасибо! ❤️ Ты отметила оплату тарифа "
         f"«{tariff_name}».\n\n"
         "Чтобы Катя проверила оплату, напиши ей "
         "в личные сообщения и отправь:\n\n"
-        "1. Чек или скриншот подтверждения оплаты.\n"
-        "2. Email, который ты указала при оплате.\n"
-        f"3. Название тарифа: {tariff_name}.\n\n"
+        f"{instructions}"
         "Важно: нажатие кнопки не подтверждает поступление "
         "денег. Катя проверит оплату вручную.",
         parse_mode="HTML",
         reply_markup=keyboard
-    )
-
-
-@dp.callback_query(F.data == "paid_basic")
-async def paid_basic_handler(callback: types.CallbackQuery):
-    await send_payment_instructions(
-        callback,
-        "Базовый расчёт — 600 ₽"
-    )
-
-
-@dp.callback_query(F.data == "paid_extended")
-async def paid_extended_handler(callback: types.CallbackQuery):
-    await send_payment_instructions(
-        callback,
-        "Расширенный расчёт — 1200 ₽"
-    )
-
-@dp.callback_query(F.data == "paid_international")
-async def paid_international_handler(callback: types.CallbackQuery):
-    await send_payment_instructions(
-        callback,
-        "Оплата для других стран"
     )
 
 # =========================================================
