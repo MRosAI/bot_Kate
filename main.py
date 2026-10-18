@@ -51,6 +51,9 @@ dp = Dispatcher()
 # ССЫЛКИ
 # =========================================================
 
+BASIC_PAYMENT_URL = "https://yookassa.ru/my/i/as0YIZDTaoqo/l"
+EXTENDED_PAYMENT_URL = "https://yookassa.ru/my/i/as0YnGYjPUdD/l"
+
 INTERNATIONAL_PAYMENT_URL = (
     "https://numerology-expert.payform.ru/"
 )
@@ -191,6 +194,12 @@ PROGRAMS = {
 # =========================================================
 # КЛАВИАТУРЫ
 # =========================================================
+start_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🌸 Узнать свою перспективу")]
+    ],
+    resize_keyboard=True
+)
 
 confirm_keyboard = ReplyKeyboardMarkup(
     keyboard=[
@@ -211,7 +220,7 @@ interest_keyboard = ReplyKeyboardMarkup(
 
 choice_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="🇷🇺 Для СНГ")],
+        [KeyboardButton(text="🇷🇺 Для Росии и стран СНГ")],
         [KeyboardButton(text="🌍 Для других стран")],
         [KeyboardButton(text="💬 Отзывы")],
         [KeyboardButton(text="📋 Правила работы и оплат")]
@@ -244,7 +253,12 @@ international_keyboard = ReplyKeyboardMarkup(
 
 reviews_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="⬅️ Назад")]
+        [
+            KeyboardButton(text="▶️")
+        ],
+        [
+            KeyboardButton(text="⬅️ Назад")
+        ]
     ],
     resize_keyboard=True
 )
@@ -256,6 +270,7 @@ reviews_keyboard = ReplyKeyboardMarkup(
 
 user_dates = {}
 user_programs = {}
+user_review_index = {}
 
 
 # =========================================================
@@ -761,14 +776,14 @@ async def start_handler(message: types.Message):
         photo=types.FSInputFile(image_path)
     )
 
-    # Отправляем приветствие
+    # Премиальное приветствие
     await message.answer(
-        "Привет! ❤️\n\n"
+        "<b>Добро пожаловать ❤️</b>\n\n"
         "Я помогу тебе получить персональную перспективу "
-        "беременности на 2027 год 🤰🏻\n\n"
-        "Чтобы получить информацию, укажи свою дату рождения.\n\n"
-        "Напиши её строго в формате: ДД.ММ.ГГГГ\n\n"
-        "Например: 12.11.1992"
+        "беременности на <b>2027 год</b> ✨\n\n"
+        "Всё начинается с твоей даты рождения.",
+        parse_mode="HTML",
+        reply_markup=start_keyboard
     )
 
 
@@ -797,23 +812,44 @@ async def confirm_date_handler(message: types.Message):
     user_id = message.from_user.id
 
     if user_id not in user_dates:
-
         await message.answer(
             "Давай начнём сначала 🌸\n\n"
             "Напиши свою дату рождения "
             "в формате ДД.ММ.ГГГГ."
         )
-
         return
 
     date_text = user_dates[user_id]
 
+    # Этап 1
+    await message.answer(
+        "🔮 Получаю данные..."
+    )
+
+    await asyncio.sleep(1)
+
+    # Этап 2
+    await message.answer(
+        "✨ Анализирую дату рождения..."
+    )
+
+    await asyncio.sleep(1)
+
+    # Этап 3
+    await message.answer(
+        "🌸 Формирую твою персональную программу..."
+    )
+
+    await asyncio.sleep(1)
+
+    # Сам расчёт — оставляем существующую формулу
     program = calculate_program(
         date_text
     )
 
     user_programs[user_id] = program
 
+    # Результат
     await message.answer(
         f"<b>Твоя программа — № {program}</b>\n\n"
         f"{PROGRAMS[program]}",
@@ -884,7 +920,7 @@ async def interest_handler(message: types.Message):
 # КНОПКА «ДЛЯ СНГ»
 # =========================================================
 
-@dp.message(F.text == "🇷🇺 Для СНГ")
+@dp.message(F.text == "🇷🇺 Для Росии и стран СНГ")
 async def cis_handler(message: types.Message):
 
     print("Нажата кнопка: Для СНГ")
@@ -925,24 +961,55 @@ async def reviews_handler(message: types.Message):
 
     print("Нажата кнопка: Отзывы")
 
+    user_id = message.from_user.id
+
+    # Начинаем просмотр с первого отзыва
+    user_review_index[user_id] = 0
+
     await message.answer(
         "❤️ <b>Отзывы девушек</b>\n\n"
         "Спасибо каждой, кто поделился своими "
-        "впечатлениями 🌸",
+        "впечатлениями 🌸\n\n"
+        "<i>Листай отзывы кнопками ниже</i> 👇",
         parse_mode="HTML",
         reply_markup=reviews_keyboard
     )
 
-    for photo_id in REVIEW_PHOTOS:
-
-        await message.answer_photo(
-            photo=photo_id
-        )
+    await message.answer_photo(
+        photo=REVIEW_PHOTOS[0],
+        caption="<b>Отзыв 1 из 10</b>",
+        parse_mode="HTML"
+    )
 
 
 # =========================================================
 # КНОПКА «НАЗАД»
 # =========================================================
+@dp.message(F.text == "▶️")
+async def next_review_handler(message: types.Message):
+
+    user_id = message.from_user.id
+
+    if user_id not in user_review_index:
+        user_review_index[user_id] = 0
+
+    current_index = user_review_index[user_id]
+
+    current_index += 1
+
+    if current_index >= len(REVIEW_PHOTOS):
+        current_index = 0
+
+    user_review_index[user_id] = current_index
+
+    await message.answer_photo(
+        photo=REVIEW_PHOTOS[current_index],
+        caption=(
+            f"<b>Отзыв {current_index + 1} "
+            f"из {len(REVIEW_PHOTOS)}</b>"
+        ),
+        parse_mode="HTML"
+    )
 
 @dp.message(F.text == "⬅️ Назад")
 async def back_handler(message: types.Message):
@@ -957,53 +1024,77 @@ async def back_handler(message: types.Message):
 # =========================================================
 
 @dp.message(F.text == "💰 Базовый расчёт — 600 ₽")
+
+@dp.message(F.text == "💰 Базовый расчёт — 600 ₽")
 async def basic_payment_handler(message: types.Message):
-
-    print(
-        ">>> Нажата кнопка: "
-        "Базовый расчёт — 600 ₽"
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="💳 Оплатить 600 ₽",
+                    url=BASIC_PAYMENT_URL
+                )
+            ]
+        ]
     )
 
-    await create_yookassa_payment(
-        message=message,
-        amount="600.00",
-        description=(
-            "Персональный расчёт "
-            "на 2027 и 2028 год"
-        ),
-        tariff_name="Базовый расчёт"
+    await message.answer(
+        "💰 <b>Базовый расчёт — 600 ₽</b>\n\n"
+        "Нажми кнопку ниже, чтобы перейти к оплате "
+        "в браузере.\n\n"
+        "После оплаты сохрани подтверждение "
+        "и отправь его Кате.",
+        parse_mode="HTML",
+        reply_markup=keyboard
     )
+
 
 
 # =========================================================
 # РАСШИРЕННЫЙ ТАРИФ
 # =========================================================
 
+
 @dp.message(F.text == "💎 Расширенный расчёт — 1200 ₽")
-async def extended_payment_handler(
-    message: types.Message
-):
-
-    print(
-        ">>> Нажата кнопка: "
-        "Расширенный расчёт — 1200 ₽"
+async def extended_payment_handler(message: types.Message):
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="💳 Оплатить 1200 ₽",
+                    url=EXTENDED_PAYMENT_URL
+                )
+            ]
+        ]
     )
 
-    await create_yookassa_payment(
-        message=message,
-        amount="1200.00",
-        description=(
-            "Расширенный персональный расчёт "
-            "на 2027, 2028 и 2029 год"
-        ),
-        tariff_name="Расширенный расчёт"
+    await message.answer(
+        "💎 <b>Расширенный расчёт — 1200 ₽</b>\n\n"
+        "Нажми кнопку ниже, чтобы перейти к оплате "
+        "в браузере.\n\n"
+        "После оплаты сохрани подтверждение "
+        "и отправь его Кате.",
+        parse_mode="HTML",
+        reply_markup=keyboard
     )
+
 
 
 # =========================================================
 # ОСНОВНОЙ ОБРАБОТЧИК
 # =========================================================
 
+@dp.message(F.text == "🌸 Узнать свою перспективу")
+async def start_calculation_handler(message: types.Message):
+
+    await message.answer(
+        "Отлично 🌸\n\n"
+        "Напиши свою дату рождения.\n\n"
+        "Формат: <b>ДД.ММ.ГГГГ</b>\n"
+        "Например: <b>12.11.1992</b>",
+        parse_mode="HTML"
+    )
+    
 @dp.message()
 async def message_handler(message: types.Message):
 
