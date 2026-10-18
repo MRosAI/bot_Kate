@@ -700,11 +700,10 @@ async def back_handler(message: types.Message):
     await show_tariffs(message)
 
 
+
 # =========================================================
 # БАЗОВЫЙ ТАРИФ
 # =========================================================
-
-@dp.message(F.text == "💰 Базовый расчёт — 600 ₽")
 
 @dp.message(F.text == "💰 Базовый расчёт — 600 ₽")
 async def basic_payment_handler(message: types.Message):
@@ -715,26 +714,29 @@ async def basic_payment_handler(message: types.Message):
                     text="💳 Оплатить 600 ₽",
                     url=BASIC_PAYMENT_URL
                 )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✅ Я оплатила",
+                    callback_data="paid_basic"
+                )
             ]
         ]
     )
 
     await message.answer(
         "💰 <b>Базовый расчёт — 600 ₽</b>\n\n"
-        "Нажми кнопку ниже, чтобы перейти к оплате "
-        "в браузере.\n\n"
-        "После оплаты сохрани подтверждение "
-        "и отправь его Кате.",
+        "Нажми кнопку оплаты и перейди по внешней ссылке. "
+        "После оплаты вернись в бот и нажми «✅ Я оплатила».\n\n"
+        "Оплата проверяется Катей вручную.",
         parse_mode="HTML",
         reply_markup=keyboard
     )
 
 
-
 # =========================================================
 # РАСШИРЕННЫЙ ТАРИФ
 # =========================================================
-
 
 @dp.message(F.text == "💎 Расширенный расчёт — 1200 ₽")
 async def extended_payment_handler(message: types.Message):
@@ -745,21 +747,76 @@ async def extended_payment_handler(message: types.Message):
                     text="💳 Оплатить 1200 ₽",
                     url=EXTENDED_PAYMENT_URL
                 )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✅ Я оплатила",
+                    callback_data="paid_extended"
+                )
             ]
         ]
     )
 
     await message.answer(
         "💎 <b>Расширенный расчёт — 1200 ₽</b>\n\n"
-        "Нажми кнопку ниже, чтобы перейти к оплате "
-        "в браузере.\n\n"
-        "После оплаты сохрани подтверждение "
-        "и отправь его Кате.",
+        "Нажми кнопку оплаты и перейди по внешней ссылке. "
+        "После оплаты вернись в бот и нажми «✅ Я оплатила».\n\n"
+        "Оплата проверяется Катей вручную.",
         parse_mode="HTML",
         reply_markup=keyboard
     )
 
 
+# =========================================================
+# ПОДТВЕРЖДЕНИЕ ОПЛАТЫ
+# =========================================================
+
+async def send_payment_instructions(
+    callback: types.CallbackQuery,
+    tariff_name: str
+):
+    await callback.answer()
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📩 Написать Кате",
+                    url=PERSONAL_MESSAGES_URL
+                )
+            ]
+        ]
+    )
+
+    await callback.message.answer(
+        f"Спасибо! ❤️ Ты отметила оплату тарифа "
+        f"«{tariff_name}».\n\n"
+        "Чтобы Катя проверила оплату, напиши ей "
+        "в личные сообщения и отправь:\n\n"
+        "1. Чек или скриншот подтверждения оплаты.\n"
+        "2. Email, который ты указала при оплате.\n"
+        f"3. Название тарифа: {tariff_name}.\n\n"
+        "Важно: нажатие кнопки не подтверждает поступление "
+        "денег. Катя проверит оплату вручную.",
+        parse_mode="HTML",
+        reply_markup=keyboard
+    )
+
+
+@dp.callback_query(F.data == "paid_basic")
+async def paid_basic_handler(callback: types.CallbackQuery):
+    await send_payment_instructions(
+        callback,
+        "Базовый расчёт — 600 ₽"
+    )
+
+
+@dp.callback_query(F.data == "paid_extended")
+async def paid_extended_handler(callback: types.CallbackQuery):
+    await send_payment_instructions(
+        callback,
+        "Расширенный расчёт — 1200 ₽"
+    )
 
 # =========================================================
 # ОСНОВНОЙ ОБРАБОТЧИК
