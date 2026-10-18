@@ -1,7 +1,6 @@
 import os
 import time
 import asyncio
-import uuid
 from collections import defaultdict
 from datetime import datetime
 
@@ -14,7 +13,6 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton
 )
-from yookassa import Configuration, Payment
 
 
 # =========================================================
@@ -26,26 +24,11 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 KATYA_CHAT_ID = os.getenv("KATYA_CHAT_ID")
 
-YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID")
-YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY")
-
-if not BOT_TOKEN:
-    raise RuntimeError("Не найден BOT_TOKEN в .env")
-
-if not YOOKASSA_SHOP_ID:
-    raise RuntimeError("Не найден YOOKASSA_SHOP_ID в .env")
-
-if not YOOKASSA_SECRET_KEY:
-    raise RuntimeError("Не найден YOOKASSA_SECRET_KEY в .env")
-
-
-Configuration.account_id = YOOKASSA_SHOP_ID
-Configuration.secret_key = YOOKASSA_SECRET_KEY
-
-
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+if not BOT_TOKEN:
+    raise RuntimeError("Не найден BOT_TOKEN в .env")
 
 # =========================================================
 # ССЫЛКИ
@@ -71,9 +54,6 @@ user_requests = defaultdict(list)
 
 RATE_LIMIT_COUNT = 5
 RATE_LIMIT_SECONDS = 10
-
-payment_in_progress = set()
-
 
 def is_rate_limited(user_id: int) -> bool:
 
@@ -453,305 +433,6 @@ async def show_rules(message: types.Message):
         reply_markup=rules_keyboard
     )
 
-
-# =========================================================
-# УВЕДОМЛЕНИЕ КАТЕ
-# =========================================================
-
-async def notify_katya(
-    message: types.Message,
-    tariff_name: str,
-    amount: str
-):
-
-    if not KATYA_CHAT_ID:
-        print("KATYA_CHAT_ID не задан.")
-        return
-
-    username = (
-        f"@{message.from_user.username}"
-        if message.from_user.username
-        else "не указан"
-    )
-
-    date_text = datetime.now().strftime(
-        "%d.%m.%Y %H:%M:%S"
-    )
-
-    try:
-
-        await bot.send_message(
-            chat_id=KATYA_CHAT_ID,
-            text=(
-                "💰 <b>Новая оплата</b>\n\n"
-                f"Тариф: <b>{tariff_name}</b>\n"
-                f"Сумма: <b>{amount} ₽</b>\n"
-                f"Пользователь: {username}\n"
-                f"Telegram ID: <code>{message.from_user.id}</code>\n"
-                f"Дата: {date_text}"
-            ),
-            parse_mode="HTML"
-        )
-
-        print("Уведомление Кате отправлено.")
-
-    except Exception as e:
-
-        print(
-            f"Ошибка отправки уведомления Кате: {e}"
-        )
-
-
-# =========================================================
-# ПРОВЕРКА ПЛАТЕЖА
-# =========================================================
-
-async def monitor_yookassa_payment(
-    payment_id: str,
-    message: types.Message,
-    tariff_name: str,
-    amount: str
-):
-
-    print(
-        f"Начата проверка платежа: "
-        f"{payment_id} | {tariff_name} | {amount} ₽"
-    )
-
-    try:
-
-        for _ in range(180):
-
-            await asyncio.sleep(5)
-
-            try:
-
-                payment = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        Payment.find_one,
-                        payment_id
-                    ),
-                    timeout=30
-                )
-
-                status = payment.status
-
-                print(
-                    f"Платёж {payment_id}: {status}"
-                )
-
-                if status == "succeeded":
-
-                    await message.answer(
-                        "🎉 <b>Оплата прошла успешно!</b>\n\n"
-                        "Спасибо за покупку ❤️\n\n"
-                        f"<b>{tariff_name}</b> оплачен.\n\n"
-                        "Теперь отправь Кате в личные сообщения:\n"
-                        "1. Имя\n"
-                        "2. Дату рождения\n\n"
-                        "И обязательно сохрани подтверждение оплаты.",
-                        parse_mode="HTML",
-                        reply_markup=InlineKeyboardMarkup(
-                            inline_keyboard=[
-                                [
-                                    InlineKeyboardButton(
-                                        text="📩 Написать Кате",
-                                        url=PERSONAL_MESSAGES_URL
-                                    )
-                                ]
-                            ]
-                        )
-                    )
-
-                    await notify_katya(
-                        message=message,
-                        tariff_name=tariff_name,
-                        amount=amount
-                    )
-
-                    print(
-                        f"Платёж успешно завершён: {payment_id}"
-                    )
-
-                    return
-
-                if status in (
-                    "canceled",
-                    "cancelled"
-                ):
-
-                    await message.answer(
-                        "❌ Платёж не был завершён.\n\n"
-                        "Если хочешь попробовать ещё раз, "
-                        "выбери тариф повторно."
-                    )
-
-                    return
-
-            except Exception as e:
-
-                print(
-                    f"Ошибка проверки платежа "
-                    f"{payment_id}: {e}"
-                )
-
-    finally:
-
-        payment_in_progress.discard(
-            message.from_user.id
-        )
-
-
-# =========================================================
-# СОЗДАНИЕ ПЛАТЕЖА ЮKASSA
-# =========================================================
-
-async def create_yookassa_payment(
-    message: types.Message,
-    amount: str,
-    description: str,
-    tariff_name: str
-):
-
-    user_id = message.from_user.id
-
-    if user_id in payment_in_progress:
-
-        await message.answer(
-            "⏳ Платёж уже создаётся.\n\n"
-            "Подожди несколько секунд."
-        )
-
-        return
-
-    payment_in_progress.add(user_id)
-
-    print(
-        f">>> Начинаем создание платежа: "
-        f"{tariff_name} | {amount} ₽ | user={user_id}"
-    )
-
-    try:
-
-        payment_data = {
-            "amount": {
-                "value": amount,
-                "currency": "RUB"
-            },
-
-            "capture": True,
-
-            "confirmation": {
-                "type": "redirect",
-                "return_url": "https://t.me/Karizskaya_k_bot"
-            },
-
-            "description": description,
-
-            "metadata": {
-                "telegram_user_id": str(user_id),
-                "telegram_username": (
-                    message.from_user.username or ""
-                ),
-                "tariff": tariff_name
-            }
-        }
-
-        print(">>> Отправляем запрос в YooKassa...")
-
-        payment = await asyncio.wait_for(
-            asyncio.to_thread(
-                Payment.create,
-                payment_data,
-                str(uuid.uuid4())
-            ),
-            timeout=30
-        )
-
-        print(
-            f">>> YooKassa ответила. "
-            f"payment_id={payment.id}"
-        )
-
-        confirmation = payment.confirmation
-
-        if not confirmation:
-            raise RuntimeError(
-                "YooKassa не вернула confirmation"
-            )
-
-        confirmation_url = (
-            confirmation.confirmation_url
-        )
-
-        if not confirmation_url:
-            raise RuntimeError(
-                "YooKassa не вернула confirmation_url"
-            )
-
-        payment_keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text=f"💳 Оплатить {amount} ₽",
-                        url=confirmation_url
-                    )
-                ]
-            ]
-        )
-
-        await message.answer(
-            f"💳 <b>{tariff_name}</b>\n\n"
-            f"Сумма: <b>{amount} ₽</b>\n\n"
-            "Нажми кнопку ниже для перехода к оплате 👇\n\n"
-            "На странице ЮKassa выбери удобный "
-            "способ оплаты.",
-            parse_mode="HTML",
-            reply_markup=payment_keyboard
-        )
-
-        print(
-            f">>> Платёж создан: "
-            f"{payment.id} | {tariff_name} | {amount} ₽"
-        )
-
-        asyncio.create_task(
-            monitor_yookassa_payment(
-                payment_id=payment.id,
-                message=message,
-                tariff_name=tariff_name,
-                amount=amount
-            )
-        )
-
-        payment_in_progress.discard(user_id)
-
-    except asyncio.TimeoutError:
-
-        payment_in_progress.discard(user_id)
-
-        print(
-            "!!! YooKassa не ответила за 30 секунд"
-        )
-
-        await message.answer(
-            "❌ YooKassa не ответила вовремя.\n\n"
-            "Попробуй ещё раз через несколько секунд."
-        )
-
-    except Exception as e:
-
-        payment_in_progress.discard(user_id)
-
-        print(
-            f"!!! Ошибка создания платежа YooKassa: "
-            f"{type(e).__name__}: {e}"
-        )
-
-        await message.answer(
-            "❌ Не удалось создать платёж.\n\n"
-            "Попробуй ещё раз через несколько секунд."
-        )
 
 
 # =========================================================
@@ -1155,10 +836,6 @@ async def main():
     print("=" * 50)
     print("БОТ ЗАПУСКАЕТСЯ")
     print("=" * 50)
-    print(
-        f"YooKassa Shop ID: "
-        f"{YOOKASSA_SHOP_ID}"
-    )
     print(
         f"Katya Chat ID: "
         f"{KATYA_CHAT_ID}"
