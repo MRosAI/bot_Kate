@@ -387,22 +387,26 @@ async def show_international_payment(message: types.Message):
                     text="🌍 Перейти к оплате",
                     url=INTERNATIONAL_PAYMENT_URL
                 )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✅ Я оплатила",
+                    callback_data="paid_international"
+                )
             ]
         ]
     )
 
     await message.answer(
         "🌍 <b>Оплата для других стран</b>\n\n"
-        "Для оплаты перейдите по кнопке ниже 👇",
+        "Перейди по ссылке ниже для оплаты. "
+        "После оплаты вернись в бот и нажми "
+        "«✅ Я оплатила».\n\n"
+        "Оплата проверяется Катей вручную.",
         parse_mode="HTML",
         reply_markup=keyboard
     )
 
-    await message.answer(
-        "После оплаты ознакомьтесь с правилами работы "
-        "и отправьте необходимые данные.",
-        reply_markup=international_keyboard
-    )
 
 
 # =========================================================
@@ -816,6 +820,13 @@ async def paid_extended_handler(callback: types.CallbackQuery):
     await send_payment_instructions(
         callback,
         "Расширенный расчёт — 1200 ₽"
+    )
+
+@dp.callback_query(F.data == "paid_international")
+async def paid_international_handler(callback: types.CallbackQuery):
+    await send_payment_instructions(
+        callback,
+        "Оплата для других стран"
     )
 
 # =========================================================
